@@ -62,30 +62,23 @@ contract('LPLocking', async ([owner, user1, user2, user3, user4]) => {
 
   });
   describe('update beneficiary', () => {
-    it('should update beneficiary address', async () => {
-      await lpLocking.updateBeneficiary('1', user3, {from: user2});
-      expect(await lpLocking.currentBeneficiary('1')).to.be.equal(user3);
-    });
     it('should revert if 0 address', async () => {
-      await expectRevert(lpLocking.updateBeneficiary('1', '0x0000000000000000000000000000000000000000', {from: user2}), "updateBeneficiary: _beneficiary address can't be 0");
+      await expectRevert(lpLocking.updateBeneficiary('0', '0x0000000000000000000000000000000000000000', {from: user2}), "updateBeneficiary: _beneficiary address can't be 0");
     });
     it('should revert if invalid deposit ID', async () => {
       await expectRevert(lpLocking.updateBeneficiary('2', user3, {from: user2}), "updateBeneficiary: depositId is too large");
     });
     it('should revert if not a Beneficiary', async () => {
-      await expectRevert(lpLocking.updateBeneficiary('1', user3, {from: user1}), "updateBeneficiary: not a beneficiary");
+      await expectRevert(lpLocking.updateBeneficiary('0', user3, {from: user1}), "updateBeneficiary: not a beneficiary");
     });
   });
 
   describe('calcTimePassed', () => {
 
-    it('should revert if still locked', async () => {
-      await expectRevert(lpLocking.calcTimePassed('1'), "calcTimePassed: tokens are still locked");
-    });
     
     it('should return passed seconds', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 6);
-      expect(await lpLocking.calcTimePassed('1')).to.be.a.bignumber.closeTo(new BN(SECONDS_IN_DAY),new BN('20'));
+      expect(await lpLocking.calcTimePassed('0')).to.be.a.bignumber.closeTo(new BN(SECONDS_IN_DAY),new BN('20'));
     });
   });
 
@@ -96,12 +89,12 @@ contract('LPLocking', async ([owner, user1, user2, user3, user4]) => {
     });
     it('should revert if not a beneficiary', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 6);
-      await expectRevert(lpLocking.withdraw('1', {from: user3}), "withdraw: not a beneficiary");
+      await expectRevert(lpLocking.withdraw('0', {from: user3}), "withdraw: not a beneficiary");
     });
     it('should withdraw', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 6);
-      await lpLocking.withdraw('1', {from: user2});
-      expect(await vestingToken.balanceOf(user2)).to.be.a.bignumber.equal(wei('101000'));
+      await lpLocking.withdraw('0', {from: user2});
+      expect(await vestingToken.balanceOf(user2)).to.be.a.bignumber.closeTo(wei('101000'), wei('0.02'));
 
     });
   });
