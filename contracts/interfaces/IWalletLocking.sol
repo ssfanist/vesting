@@ -12,8 +12,7 @@ interface IWalletLocking {
 		uint256 depositTime;
 		uint256 totalAmount;
 	}
-
-	event Lock(uint256 indexed depositId, address _token ,uint256 _lock, uint256[] _vesting, uint256[] _percentages, address[] _beneficiaries, uint256[] _allocAmounts);
+	event Lock(uint256 indexed depositId, address _token ,uint256 _lock, uint256[] _percentages, uint256[] _vestings , address[] _beneficiaries, uint256[] _allocAmounts);
 	event Withdraw(uint256 indexed depositId, uint256 amount, address _beneficiary);
 
 	function lock(address _token, uint256 _lock, uint256[] memory _percentages, uint256[] memory _vestings, address[] memory _beneficiaries, uint256[] memory _allocAmounts) external;

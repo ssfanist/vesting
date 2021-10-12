@@ -46,11 +46,13 @@ contract WalletLocking is IWalletLocking{
 		_depositInfo.depositTime = block.timestamp;
 		_depositInfo.totalAmount = totalAmount;
 
+		depositId = depositId + 1;
+
 		IERC20 token = IERC20(_token);
 		token.safeTransferFrom(address(msg.sender), address(this), totalAmount);
 
-		emit Lock(depositId, _token, _lock, _percentages, _vestings, _beneficiaries, _allocAmounts);
-		depositId = depositId + 1;
+		emit Lock(depositId - 1, _token, _lock, _percentages, _vestings, _beneficiaries, _allocAmounts);
+
 	}
 
 	function withdraw(uint256 _depositId) external override {
@@ -71,7 +73,9 @@ contract WalletLocking is IWalletLocking{
 	}
 	function _calcVestableAmount(uint256 _depositId) public view returns (uint256) {
 
-		require(_depositId < depositId, "_calcVestableAmount: depositId is too large");
+		if (_depositId >= depositId) {
+			return 0;
+		}
 
 		DepositInfo storage _depositInfo = depositInfo[_depositId];
 

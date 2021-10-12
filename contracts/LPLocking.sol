@@ -30,11 +30,13 @@ contract LPLocking is ILPLocking{
 		_depositInfo.beneficiary = _beneficiary;
 		_depositInfo.depositTime = block.timestamp;
 
+		depositId = depositId + 1;
+
 		IERC20 lpToken = IERC20(_lpToken);
 		lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
 
-		emit Deposit(depositId, _lpToken, _amount, _lock, _vesting, _beneficiary);
-		depositId = depositId + 1;
+		emit Deposit(depositId - 1, _lpToken, _amount, _lock, _vesting, _beneficiary);
+
 	}
 
 	function withdraw(uint256 _depositId) external override {
