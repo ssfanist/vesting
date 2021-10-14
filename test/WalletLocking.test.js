@@ -71,32 +71,32 @@ contract('WalletLocking', async ([owner, user1, user2, user3, user4]) => {
 
     it('should calculate vestable amounts1', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 6);
-      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.equal(wei('500'));
+      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.closeTo(wei('500'),wei('0.01'));
     });
     it('should calculate vestable amounts2', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 6);
-      expect(await walletLocking._calcVestableAmount('0', {from: user2})).to.be.a.bignumber.equal(wei('1000'));
+      expect(await walletLocking._calcVestableAmount('0', {from: user2})).to.be.a.bignumber.closeTo(wei('1000'),wei('0.01'));
     });
     
     it('should calculate vestable amounts3', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 16);
-      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.equal(wei('5250'));
+      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.closeTo(wei('5250'),wei('0.01'));
     });
     it('should calculate vestable amounts4', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 14);
-      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.equal(wei('4500'));
+      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.closeTo(wei('4500'), wei('0.01'));
     });
     it('should calculate vestable amounts5', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 15);
-      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.closeTo(wei('5000'),wei('0.002'));
+      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.closeTo(wei('5000'),wei('0.01'));
     });
     it('should calculate vestable amounts6', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 25);
-      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.equal(wei('7500'));
+      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.closeTo(wei('7500'),wei('0.01'));
     });
     it('should calculate vestable amounts7', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 29);
-      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.equal(wei('8000'));
+      expect(await walletLocking._calcVestableAmount('0', {from: user1})).to.be.a.bignumber.closeTo(wei('8000'),wei('0.01'));
     });
   });
 
@@ -110,7 +110,7 @@ contract('WalletLocking', async ([owner, user1, user2, user3, user4]) => {
     it('should withdraw correct amounts1', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 65);
       await walletLocking.withdraw('0', {from: user1});
-      expect(await vestingToken.balanceOf(user1)).to.be.a.bignumber.equal(wei('60000'));
+      expect(await vestingToken.balanceOf(user1)).to.be.a.bignumber.closeTo(wei('60000'),wei('0.01'));
     });
     it('should withdraw correct amounts2', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY * 16);
@@ -140,7 +140,7 @@ contract('WalletLocking', async ([owner, user1, user2, user3, user4]) => {
 
       await advanceTimeAndBlock(SECONDS_IN_DAY * 125);
       await walletLocking.withdraw('0', {from: user1});
-      expect(await vestingToken.balanceOf(user1)).to.be.a.bignumber.equal(wei('60000'));
+      expect(await vestingToken.balanceOf(user1)).to.be.a.bignumber.closeTo(wei('60000'),wei('0.01'));
     });
   });
 

@@ -27,7 +27,7 @@ contract CataPult is ICataPult, OwnableUpgradeable{
 		require(_totalRaise > 0, "addTeam: _totalRaise must be greater than 0");
 		require(_beneficiary != address(0), "addTeam: _beneficiary address cant be 0");
 		require(_startTime >= block.timestamp, "addTeam: startTime should be greater than current Time");
-		require(_endTime > _startTime, "addTeam: endTime should be greater than endTime");
+		require(_endTime > _startTime, "addTeam: endTime should be greater than startTime");
 		require(_price > 0, "addTeam: _price must be greater than 0");
 		require(_minAlloc > 0, "addTeam: _minAlloc must be greater than 0");
 		require(_maxAlloc > _minAlloc, "addTeam: _minAlloc must be greater than _maxAlloc");
@@ -53,6 +53,7 @@ contract CataPult is ICataPult, OwnableUpgradeable{
 		require(_amount >= _teamInfo.minAlloc, "deposit: amount must be greater than minAlloc");
 		require(_amount <= _teamInfo.maxAlloc, "deposit: amount must be lower than maxAlloc");
 		require(_teamInfo.totalDeposit < _teamInfo.totalRaise, "deposit: already reached to limit");
+		require(block.timestamp >= _teamInfo.startTime, "deposit: not started yet");
 
 		IERC20 teamToken = IERC20(_teamInfo.token);
 		uint256 availAmount;
@@ -99,12 +100,15 @@ contract CataPult is ICataPult, OwnableUpgradeable{
 		require(_teamId < teamId, "updateTimes: _teamId is too large");
 		TeamInfo storage _teamInfo = teamInfo[_teamId];
 		require(_startTime >= block.timestamp, "updateTimes: startTime should be greater than current Time");
-		require(_startTime < _endTime, "updateTimes: endTime should be greater than endTime");
+		require(_startTime < _endTime, "updateTimes: endTime should be greater than startTime");
 
 		_teamInfo.startTime = _startTime;
 		_teamInfo.endTime = _endTime;
 
 		emit UpdateTimes(_teamId, _startTime, _endTime);
+	}
+	function getBlockTimestamp() public view returns(uint256) {
+		return block.timestamp;
 	}
 
 	function withdraw(uint256 _teamId) external override {
