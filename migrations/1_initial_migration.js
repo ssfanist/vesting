@@ -7,5 +7,6 @@ const CataPult = artifacts.require("CataPult");
 module.exports = function (deployer) {
   // deployer.deploy(Migrations);
   // deployer.deploy(LPLocking);
-  deployer.deploy(CataPult);
+  deployer.deploy(WalletLocking);
+  // deployer.deploy(CataPult);
 };
