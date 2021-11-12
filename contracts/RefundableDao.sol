@@ -119,7 +119,7 @@ contract RefundableDao is IRefundableDao, AccessControl {
 		PoolInfo storage pool = poolInfo[poolId];
 		require(block.timestamp <= pool.endTime, "deposit: already ended");
 		require(block.timestamp >= pool.startTime, "deposit: not started yet");
-		// require(hasRole(QUOTE_SIGNER_ROLE, recoverSigner(_msgSender(), quote, quoteSignature)), "!valid signature");
+		require(hasRole(QUOTE_SIGNER_ROLE, recoverSigner(_msgSender(), quote, quoteSignature)), "!valid signature");
 
 		UserInfo storage user = pool.userInfo[msg.sender];
 
