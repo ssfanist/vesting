@@ -10,7 +10,12 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./interfaces/IStaking.sol";
 
-contract Staking is IStaking, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract Staking is
+    IStaking,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
+{
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -69,7 +74,10 @@ contract Staking is IStaking, OwnableUpgradeable, ReentrancyGuardUpgradeable, Pa
         uint256 _blocksAmount,
         bool _immWithdraw
     ) external onlyOwner updateReward(pid, address(0)) {
-        require(_startingBlock >= block.number, "AddPool: starting Period is over");
+        require(
+            _startingBlock >= block.number,
+            "AddPool: starting Period is over"
+        );
         PoolInfo storage pool = poolInfo[pid];
 
         pool.name = _name;
@@ -118,11 +126,27 @@ contract Staking is IStaking, OwnableUpgradeable, ReentrancyGuardUpgradeable, Pa
         PoolInfo storage pool = poolInfo[_pid];
 
         require(_amount > 0, "Stake: can't stake 0");
-        require(_amount >= pool.stakingLimits[0], "Stake: _amount is too small");
-        require(pool.staked[msg.sender].add(_amount) <= pool.stakingLimits[1], "Stake: _amount is too high");
-        require(pool.totalStaked < pool.poolLimit, "Stake: pool already filled");
-        require(block.number < pool.firstBlockWithReward.add(pool.blockAmount).sub(1), "Stake: staking period is over");
-        require(block.number >= pool.firstBlockWithReward, "Stake: too early to stake");
+        require(
+            _amount >= pool.stakingLimits[0],
+            "Stake: _amount is too small"
+        );
+        require(
+            pool.staked[msg.sender].add(_amount) <= pool.stakingLimits[1],
+            "Stake: _amount is too high"
+        );
+        require(
+            pool.totalStaked < pool.poolLimit,
+            "Stake: pool already filled"
+        );
+        require(
+            block.number <
+                pool.firstBlockWithReward.add(pool.blockAmount).sub(1),
+            "Stake: staking period is over"
+        );
+        require(
+            block.number >= pool.firstBlockWithReward,
+            "Stake: too early to stake"
+        );
 
         uint256 amount = _amount;
         if (pool.totalStaked.add(_amount) > pool.poolLimit) {
@@ -135,15 +159,24 @@ contract Staking is IStaking, OwnableUpgradeable, ReentrancyGuardUpgradeable, Pa
         emit Staked(msg.sender, amount);
     }
 
-    function withdraw(uint256 _pid, uint256 _amount) public override nonReentrant updateReward(_pid, msg.sender) {
+    function withdraw(uint256 _pid, uint256 _amount)
+        public
+        override
+        nonReentrant
+        updateReward(_pid, msg.sender)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
         require(_amount > 0, "Amount should be greater then 0");
-        require(pool.staked[msg.sender] >= _amount, "Insufficient staked amount");
+        require(
+            pool.staked[msg.sender] >= _amount,
+            "Insufficient staked amount"
+        );
 
         if (!immWithdraw[_pid]) {
             require(
-                block.number >= pool.firstBlockWithReward.add(pool.blockAmount).sub(1),
+                block.number >=
+                    pool.firstBlockWithReward.add(pool.blockAmount).sub(1),
                 "cant withdraw at the moment"
             );
         }
@@ -154,43 +187,78 @@ contract Staking is IStaking, OwnableUpgradeable, ReentrancyGuardUpgradeable, Pa
         emit Withdrawn(msg.sender, _amount);
     }
 
-    function blocksWithRewardsPassed(uint256 _pid) public view override returns (uint256) {
+    function blocksWithRewardsPassed(uint256 _pid)
+        public
+        view
+        override
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
-        uint256 from = MathUpgradeable.max(pool.lastUpdateBlock, pool.firstBlockWithReward);
-        uint256 to = MathUpgradeable.min(block.number, pool.firstBlockWithReward.add(pool.blockAmount).sub(1));
+        uint256 from = MathUpgradeable.max(
+            pool.lastUpdateBlock,
+            pool.firstBlockWithReward
+        );
+        uint256 to = MathUpgradeable.min(
+            block.number,
+            pool.firstBlockWithReward.add(pool.blockAmount).sub(1)
+        );
 
         return from > to ? 0 : to.sub(from);
     }
 
-    function rewardPerToken(uint256 _pid) public view override returns (uint256) {
+    function rewardPerToken(uint256 _pid)
+        public
+        view
+        override
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
         if (pool.totalStaked == 0 || pool.lastUpdateBlock == block.number) {
             return pool.rewardPerTokenStored;
         }
 
-        uint256 accumulatedReward = blocksWithRewardsPassed(_pid).mul(pool.rewardPerBlock).mul(1e18).div(
-            pool.totalStaked
-        );
+        uint256 accumulatedReward = blocksWithRewardsPassed(_pid)
+            .mul(pool.rewardPerBlock)
+            .mul(1e18)
+            .div(pool.totalStaked);
         return pool.rewardPerTokenStored.add(accumulatedReward);
     }
 
-    function earned(uint256 _pid, address _account) public view override returns (uint256) {
+    function earned(uint256 _pid, address _account)
+        public
+        view
+        override
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
-        uint256 rewardsDifference = rewardPerToken(_pid).sub(pool.userRewardPerTokenPaid[_account]);
-        uint256 newlyAccumulated = pool.staked[_account].mul(rewardsDifference).div(1e18);
+        uint256 rewardsDifference = rewardPerToken(_pid).sub(
+            pool.userRewardPerTokenPaid[_account]
+        );
+        uint256 newlyAccumulated = pool
+            .staked[_account]
+            .mul(rewardsDifference)
+            .div(1e18);
         return pool.rewards[_account].add(newlyAccumulated);
     }
 
-    function _getFutureRewardTokens(uint256 _pid) internal view returns (uint256) {
+    function _getFutureRewardTokens(uint256 _pid)
+        internal
+        view
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
         return _calculateBlocksLeft(_pid).mul(pool.rewardPerBlock);
     }
 
-    function _calculateBlocksLeft(uint256 _pid) internal view returns (uint256) {
+    function _calculateBlocksLeft(uint256 _pid)
+        internal
+        view
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
         uint256 _from = pool.firstBlockWithReward;
@@ -205,16 +273,29 @@ contract Staking is IStaking, OwnableUpgradeable, ReentrancyGuardUpgradeable, Pa
         return pool.totalStaked;
     }
 
-    function userStaked(uint256 _pid, address _user) public view returns (uint256) {
+    function userStaked(uint256 _pid, address _user)
+        public
+        view
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
         return pool.staked[_user];
     }
 
-    function userRewards(uint256 _pid, address _account) public view returns (uint256) {
+    function userRewards(uint256 _pid, address _account)
+        public
+        view
+        returns (uint256)
+    {
         PoolInfo storage pool = poolInfo[_pid];
 
-        uint256 rewardsDifference = rewardPerToken(_pid).sub(pool.userRewardPerTokenPaid[_account]);
-        uint256 newlyAccumulated = pool.staked[_account].mul(rewardsDifference).div(1e18);
+        uint256 rewardsDifference = rewardPerToken(_pid).sub(
+            pool.userRewardPerTokenPaid[_account]
+        );
+        uint256 newlyAccumulated = pool
+            .staked[_account]
+            .mul(rewardsDifference)
+            .div(1e18);
         return pool.rewards[_account].add(newlyAccumulated);
     }
 }

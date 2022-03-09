@@ -42,7 +42,10 @@ contract RefundableDao is IRefundableDao, AccessControl {
     ) external onlyAdmin {
         require(_tokenPrice > 0, "invalid token price");
         require(_teamToken != address(0), "token address cant be 0");
-        require(_startTime < _endTime, "endTime should be greater than startTime");
+        require(
+            _startTime < _endTime,
+            "endTime should be greater than startTime"
+        );
         require(_beneficiary != address(0), "token address cant be 0");
 
         PoolInfo storage pool = poolInfo[id];
@@ -53,7 +56,15 @@ contract RefundableDao is IRefundableDao, AccessControl {
         pool.endTime = _endTime;
         pool.beneficiary = _beneficiary;
 
-        emit AddedPool(id, _tokenPrice, _token, _teamToken, _startTime, _endTime, _beneficiary);
+        emit AddedPool(
+            id,
+            _tokenPrice,
+            _token,
+            _teamToken,
+            _startTime,
+            _endTime,
+            _beneficiary
+        );
 
         id += 1;
     }
@@ -64,7 +75,10 @@ contract RefundableDao is IRefundableDao, AccessControl {
         uint256 _startTime,
         uint256 _endTime
     ) external onlyAdmin {
-        require(_startTime < _endTime, "endTime should be greater than startTime");
+        require(
+            _startTime < _endTime,
+            "endTime should be greater than startTime"
+        );
 
         PoolInfo storage pool = poolInfo[_poolId];
         pool.startTime = _startTime;
@@ -85,7 +99,10 @@ contract RefundableDao is IRefundableDao, AccessControl {
     }
 
     // Owner can set new Beneficiary
-    function setBeneficiaryAddress(uint256 poolId, address _beneficiary) external onlyAdmin {
+    function setBeneficiaryAddress(uint256 poolId, address _beneficiary)
+        external
+        onlyAdmin
+    {
         require(_beneficiary != address(0), "token address cant be 0");
 
         PoolInfo storage pool = poolInfo[poolId];
@@ -100,7 +117,10 @@ contract RefundableDao is IRefundableDao, AccessControl {
         PoolInfo storage pool = poolInfo[poolId];
         require(msg.sender == pool.beneficiary, "withdraw: not a beneficiary");
 
-        require(IERC20(pool.token).transfer(msg.sender, pool.deposit), "withdraw: failed");
+        require(
+            IERC20(pool.token).transfer(msg.sender, pool.deposit),
+            "withdraw: failed"
+        );
 
         emit Withdrawed(poolId, msg.sender, pool.deposit);
     }
@@ -110,7 +130,10 @@ contract RefundableDao is IRefundableDao, AccessControl {
     function withdrawUnUsedTokens(uint256 poolId) external {
         PoolInfo storage pool = poolInfo[poolId];
 
-        require(msg.sender == pool.beneficiary, "withdrawUnUsedTokens: not a beneficiary");
+        require(
+            msg.sender == pool.beneficiary,
+            "withdrawUnUsedTokens: not a beneficiary"
+        );
         uint256 totalBalance = IERC20(pool.teamToken).balanceOf(address(this));
         uint256 usedAmount = pool.deposit * pool.tokenPrice;
         uint256 unUsedAmount;
@@ -119,7 +142,10 @@ contract RefundableDao is IRefundableDao, AccessControl {
         } else {
             usedAmount = totalBalance;
         }
-        require(IERC20(pool.teamToken).transfer(msg.sender, unUsedAmount), "withdrawUnUsedTokens: failed");
+        require(
+            IERC20(pool.teamToken).transfer(msg.sender, unUsedAmount),
+            "withdrawUnUsedTokens: failed"
+        );
 
         emit WithdrawedUnUsedTokens(poolId, msg.sender, unUsedAmount);
     }
@@ -133,15 +159,27 @@ contract RefundableDao is IRefundableDao, AccessControl {
         PoolInfo storage pool = poolInfo[poolId];
         require(block.timestamp <= pool.endTime, "deposit: already ended");
         require(block.timestamp >= pool.startTime, "deposit: not started yet");
-        require(hasRole(QUOTE_SIGNER_ROLE, recoverSigner(_msgSender(), quote, quoteSignature)), "!valid signature");
+        require(
+            hasRole(
+                QUOTE_SIGNER_ROLE,
+                recoverSigner(_msgSender(), quote, quoteSignature)
+            ),
+            "!valid signature"
+        );
 
         UserInfo storage user = pool.userInfo[msg.sender];
 
-        require(IERC20(pool.token).transferFrom(msg.sender, address(this), amount), "deposit failed");
+        require(
+            IERC20(pool.token).transferFrom(msg.sender, address(this), amount),
+            "deposit failed"
+        );
 
         uint256 purchaseAmount = amount.mul(pool.tokenPrice).div(1e18);
 
-        require(user.claimableAmount + purchaseAmount <= quote, "!enough quote");
+        require(
+            user.claimableAmount + purchaseAmount <= quote,
+            "!enough quote"
+        );
 
         user.claimableAmount += purchaseAmount;
         user.deposit += amount;
@@ -155,11 +193,17 @@ contract RefundableDao is IRefundableDao, AccessControl {
     function refund(uint256 poolId) external {
         PoolInfo storage pool = poolInfo[poolId];
 
-        require(block.timestamp.sub(24 * 3600) <= pool.endTime, "refund: cant refund after 24 hrs");
+        require(
+            block.timestamp.sub(24 * 3600) <= pool.endTime,
+            "refund: cant refund after 24 hrs"
+        );
 
         UserInfo storage user = pool.userInfo[msg.sender];
 
-        require(IERC20(pool.token).transfer(msg.sender, user.deposit), "refund: refund failed");
+        require(
+            IERC20(pool.token).transfer(msg.sender, user.deposit),
+            "refund: refund failed"
+        );
 
         pool.deposit = pool.deposit.sub(user.deposit);
         pool.claimableAmount = pool.claimableAmount.sub(user.claimableAmount);
@@ -176,7 +220,10 @@ contract RefundableDao is IRefundableDao, AccessControl {
 
         UserInfo storage user = pool.userInfo[msg.sender];
 
-        require(IERC20(pool.teamToken).transfer(msg.sender, user.claimableAmount), "claim: claim failed!");
+        require(
+            IERC20(pool.teamToken).transfer(msg.sender, user.claimableAmount),
+            "claim: claim failed!"
+        );
 
         pool.claimableAmount = pool.claimableAmount.sub(user.claimableAmount);
 

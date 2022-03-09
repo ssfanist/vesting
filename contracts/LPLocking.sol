@@ -23,7 +23,10 @@ contract LPLocking is ILPLocking {
     ) external override {
         require(_lpToken != address(0), "deposit: token address can't be 0");
         require(_amount > 0, "deposit: amount must be greater than 0");
-        require(_beneficiary != address(0), "deposit: _beneficiary address can't be 0");
+        require(
+            _beneficiary != address(0),
+            "deposit: _beneficiary address can't be 0"
+        );
 
         DepositInfo storage _depositInfo = depositInfo[depositId];
 
@@ -39,7 +42,14 @@ contract LPLocking is ILPLocking {
         IERC20 lpToken = IERC20(_lpToken);
         lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
 
-        emit Deposit(depositId - 1, _lpToken, _amount, _lock, _vesting, _beneficiary);
+        emit Deposit(
+            depositId - 1,
+            _lpToken,
+            _amount,
+            _lock,
+            _vesting,
+            _beneficiary
+        );
     }
 
     function withdraw(uint256 _depositId) external override {
@@ -48,12 +58,17 @@ contract LPLocking is ILPLocking {
         DepositInfo storage _depositInfo = depositInfo[_depositId];
         uint256 timePassed = calcTimePassed(_depositId);
 
-        require(_depositInfo.beneficiary == address(msg.sender), "withdraw: not a beneficiary");
+        require(
+            _depositInfo.beneficiary == address(msg.sender),
+            "withdraw: not a beneficiary"
+        );
         uint256 amount;
         if (timePassed >= _depositInfo.vesting) {
             amount = _depositInfo.amount - _depositInfo.amountWithdraw;
         } else {
-            amount = _depositInfo.amount.mul(timePassed).div(_depositInfo.vesting) - _depositInfo.amountWithdraw;
+            amount =
+                _depositInfo.amount.mul(timePassed).div(_depositInfo.vesting) -
+                _depositInfo.amountWithdraw;
         }
         _depositInfo.amountWithdraw = _depositInfo.amountWithdraw.add(amount);
 
@@ -63,12 +78,24 @@ contract LPLocking is ILPLocking {
         emit Withdraw(depositId, amount, _depositInfo.beneficiary);
     }
 
-    function updateBeneficiary(uint256 _depositId, address _beneficiary) external override {
-        require(_depositId < depositId, "updateBeneficiary: depositId is too large");
+    function updateBeneficiary(uint256 _depositId, address _beneficiary)
+        external
+        override
+    {
+        require(
+            _depositId < depositId,
+            "updateBeneficiary: depositId is too large"
+        );
 
         DepositInfo storage _depositInfo = depositInfo[_depositId];
-        require(_beneficiary != address(0), "updateBeneficiary: _beneficiary address can't be 0");
-        require(_depositInfo.beneficiary == address(msg.sender), "updateBeneficiary: not a beneficiary");
+        require(
+            _beneficiary != address(0),
+            "updateBeneficiary: _beneficiary address can't be 0"
+        );
+        require(
+            _depositInfo.beneficiary == address(msg.sender),
+            "updateBeneficiary: not a beneficiary"
+        );
 
         _depositInfo.beneficiary = _beneficiary;
 
@@ -78,8 +105,10 @@ contract LPLocking is ILPLocking {
     function calcTimePassed(uint256 _depositId) public view returns (uint256) {
         DepositInfo storage _depositInfo = depositInfo[_depositId];
 
-        if (block.timestamp <= _depositInfo.depositTime.add(_depositInfo.lock)) return 0;
-        uint256 timePassed = (block.timestamp.sub(_depositInfo.depositTime)).sub(_depositInfo.lock);
+        if (block.timestamp <= _depositInfo.depositTime.add(_depositInfo.lock))
+            return 0;
+        uint256 timePassed = (block.timestamp.sub(_depositInfo.depositTime))
+            .sub(_depositInfo.lock);
         return timePassed;
     }
 }

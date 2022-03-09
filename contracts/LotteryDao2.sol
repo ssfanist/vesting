@@ -33,7 +33,10 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         bytes32[] calldata _whitelistProof,
         uint256 _tickets
     ) {
-        require(verifyWhitelist(_addr, _poolId, _tickets, _whitelistProof), "not a winner");
+        require(
+            verifyWhitelist(_addr, _poolId, _tickets, _whitelistProof),
+            "not a winner"
+        );
         _;
     }
 
@@ -51,19 +54,31 @@ contract LotteryDao2 is ILotteryDao, Ownable {
 
     function addPool(InitialInfo memory _info) external onlyOwner {
         require(_info.totalRaise > 0, "totalRaise should greater than 0");
-        require(_info.winningTickets > 0, "_winningTickets should greater than 0");
+        require(
+            _info.winningTickets > 0,
+            "_winningTickets should greater than 0"
+        );
         require(_info.beneficiary != address(0), "token address cant be 0");
         require(_info.tokenPrice > 0, "invalid token price");
         require(_info.teamTokenPrice > 0, "invalid token price");
         require(_info.teamToken != address(0), "_teamToken address cant be 0");
         require(_info.token != address(0), "token address cant be 0");
-        require(block.timestamp < _info.openTime, "_openTime should be greater than openTime");
-        require(_info.openTime < _info.lotteryOpenTime, "_lotteryOpenTime should be greater than _openTime");
+        require(
+            block.timestamp < _info.openTime,
+            "_openTime should be greater than openTime"
+        );
+        require(
+            _info.openTime < _info.lotteryOpenTime,
+            "_lotteryOpenTime should be greater than _openTime"
+        );
         require(
             _info.lotteryOpenTime < _info.lotteryEndTime,
             "_lotteryEndTime should be greater than _lotteryOpenTime"
         );
-        require(_info.lotteryEndTime < _info.endTime, "_endTime should be greater than _lotteryTime");
+        require(
+            _info.lotteryEndTime < _info.endTime,
+            "_endTime should be greater than _lotteryTime"
+        );
 
         PoolInfo storage pool = poolInfo[poolId];
         pool.info = _info;
@@ -73,10 +88,20 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         emit AddedPool(poolId, _info);
     }
 
-    function updateBeneficiary(uint256 _poolId, address _beneficiary) external onlyOwner checkPoolId(_poolId) {
+    function updateBeneficiary(uint256 _poolId, address _beneficiary)
+        external
+        onlyOwner
+        checkPoolId(_poolId)
+    {
         PoolInfo storage _poolInfo = poolInfo[_poolId];
-        require(_beneficiary != address(0), "updateBeneficiary: _beneficiary address cant be 0");
-        require(_poolInfo.info.beneficiary == msg.sender, "updateBeneficiary: not a beneficiary");
+        require(
+            _beneficiary != address(0),
+            "updateBeneficiary: _beneficiary address cant be 0"
+        );
+        require(
+            _poolInfo.info.beneficiary == msg.sender,
+            "updateBeneficiary: not a beneficiary"
+        );
 
         _poolInfo.info.beneficiary = _beneficiary;
 
@@ -91,10 +116,22 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         uint256 _lotteryEndTime,
         uint256 _endTime
     ) external onlyOwner checkPoolId(_poolId) {
-        require(block.timestamp < _openTime, "_openTime should be greater than openTime");
-        require(_openTime < _lotteryOpenTime, "_lotteryOpenTime should be greater than _openTime");
-        require(_lotteryOpenTime < _lotteryEndTime, "_lotteryEndTime should be greater than _lotteryOpenTime");
-        require(_lotteryEndTime < _endTime, "_endTime should be greater than _lotteryTime");
+        require(
+            block.timestamp < _openTime,
+            "_openTime should be greater than openTime"
+        );
+        require(
+            _openTime < _lotteryOpenTime,
+            "_lotteryOpenTime should be greater than _openTime"
+        );
+        require(
+            _lotteryOpenTime < _lotteryEndTime,
+            "_lotteryEndTime should be greater than _lotteryOpenTime"
+        );
+        require(
+            _lotteryEndTime < _endTime,
+            "_endTime should be greater than _lotteryTime"
+        );
 
         PoolInfo storage pool = poolInfo[_poolId];
         pool.info.openTime = _openTime;
@@ -102,7 +139,13 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         pool.info.lotteryEndTime = _lotteryEndTime;
         pool.info.endTime = _endTime;
 
-        emit SetTimes(_poolId, _openTime, _lotteryOpenTime, _lotteryEndTime, _endTime);
+        emit SetTimes(
+            _poolId,
+            _openTime,
+            _lotteryOpenTime,
+            _lotteryEndTime,
+            _endTime
+        );
     }
 
     function setPrices(
@@ -111,7 +154,10 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         uint256 _teamTokenPrice
     ) external onlyOwner checkPoolId(_poolId) {
         PoolInfo storage pool = poolInfo[_poolId];
-        require(block.timestamp < pool.info.openTime, "_openTime should be greater than openTime");
+        require(
+            block.timestamp < pool.info.openTime,
+            "_openTime should be greater than openTime"
+        );
 
         pool.info.tokenPrice = _tokenPrice;
         pool.info.teamTokenPrice = _teamTokenPrice;
@@ -121,17 +167,32 @@ contract LotteryDao2 is ILotteryDao, Ownable {
 
     function withdrawFunds(uint256 _poolId) external checkPoolId(_poolId) {
         PoolInfo storage pool = poolInfo[_poolId];
-        require(pool.info.beneficiary == msg.sender, "withdrawFunds: not a beneficiary");
-        require(block.timestamp >= pool.info.endTime, "withdrawFunds: not finished yet");
-        require(IERC20(pool.info.token).balanceOf(address(this)) > 0, "withdrawFunds: insufficient balance");
+        require(
+            pool.info.beneficiary == msg.sender,
+            "withdrawFunds: not a beneficiary"
+        );
+        require(
+            block.timestamp >= pool.info.endTime,
+            "withdrawFunds: not finished yet"
+        );
+        require(
+            IERC20(pool.info.token).balanceOf(address(this)) > 0,
+            "withdrawFunds: insufficient balance"
+        );
         IERC20(pool.info.token).transfer(pool.info.beneficiary, pool.poolRaise);
 
         emit WithdrawFunds(_poolId, msg.sender, pool.poolRaise);
     }
 
-    function setMinAllocation(uint256 _poolId, uint256 _amount) external checkPoolId(_poolId) {
+    function setMinAllocation(uint256 _poolId, uint256 _amount)
+        external
+        checkPoolId(_poolId)
+    {
         PoolInfo storage pool = poolInfo[_poolId];
-        require(block.timestamp <= pool.info.openTime, "setBlockHash: can set BlockHash before lotteryTime");
+        require(
+            block.timestamp <= pool.info.openTime,
+            "setBlockHash: can set BlockHash before lotteryTime"
+        );
 
         pool.minAllocation = _amount;
 
@@ -153,7 +214,11 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         emit LotteryRegistry(_poolId);
     }
 
-    function registeredUsersInfo(uint256 _poolId, address _user) public view returns (address, uint256) {
+    function registeredUsersInfo(uint256 _poolId, address _user)
+        public
+        view
+        returns (address, uint256)
+    {
         PoolInfo storage pool = poolInfo[_poolId];
         require(pool.ticketPrice > 0, "Ticket Price not set yet");
 
@@ -161,7 +226,11 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         return (_user, balance / pool.ticketPrice);
     }
 
-    function setTicketAllocation(uint256 _poolId, uint256 _amount) external onlyOwner checkPoolId(_poolId) {
+    function setTicketAllocation(uint256 _poolId, uint256 _amount)
+        external
+        onlyOwner
+        checkPoolId(_poolId)
+    {
         PoolInfo storage pool = poolInfo[_poolId];
 
         pool.ticketAllocation = _amount;
@@ -169,7 +238,11 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         emit SetTicketAllocation(_poolId, _amount);
     }
 
-    function setTicketPrice(uint256 _poolId, uint256 _amount) external onlyOwner checkPoolId(_poolId) {
+    function setTicketPrice(uint256 _poolId, uint256 _amount)
+        external
+        onlyOwner
+        checkPoolId(_poolId)
+    {
         PoolInfo storage pool = poolInfo[_poolId];
 
         pool.ticketPrice = _amount;
@@ -182,19 +255,40 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         uint256 _amount,
         bytes32[] calldata _whitelistProof,
         uint256 _tickets
-    ) external checkPoolId(_poolId) checkWinner(_poolId, msg.sender, _whitelistProof, _tickets) {
+    )
+        external
+        checkPoolId(_poolId)
+        checkWinner(_poolId, msg.sender, _whitelistProof, _tickets)
+    {
         PoolInfo storage pool = poolInfo[_poolId];
         UserInfo storage userdata = pool.userdata[msg.sender];
 
         pool.participatedAmount += _amount;
         userdata.participatedAmount += _amount;
 
-        require(userdata.participatedAmount <= _tickets.mul(pool.ticketAllocation), "participate: reached to limit");
-        require(userdata.participatedAmount.mul(pool.info.tokenPrice) >= pool.minAllocation);
-        require(userdata.participatedAmount.mul(pool.info.tokenPrice) <= pool.maxAllocation);
-        require(pool.participatedAmount.mul(pool.info.tokenPrice) <= pool.info.totalRaise, "participate: POOL FILLED");
+        require(
+            userdata.participatedAmount <= _tickets.mul(pool.ticketAllocation),
+            "participate: reached to limit"
+        );
+        require(
+            userdata.participatedAmount.mul(pool.info.tokenPrice) >=
+                pool.minAllocation
+        );
+        require(
+            userdata.participatedAmount.mul(pool.info.tokenPrice) <=
+                pool.maxAllocation
+        );
+        require(
+            pool.participatedAmount.mul(pool.info.tokenPrice) <=
+                pool.info.totalRaise,
+            "participate: POOL FILLED"
+        );
 
-        IERC20(pool.info.token).transferFrom(msg.sender, address(this), _amount);
+        IERC20(pool.info.token).transferFrom(
+            msg.sender,
+            address(this),
+            _amount
+        );
 
         emit Participated(_poolId, _amount, msg.sender);
     }
@@ -207,19 +301,31 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         uint256[] memory _vestingsPeriods
     ) external {
         require(_token != address(0), "Lock: token address can't be 0");
-        require(_vestingsPeriods.length == _percentages.length, "Lock: Input arrary lengths mismatch");
+        require(
+            _vestingsPeriods.length == _percentages.length,
+            "Lock: Input arrary lengths mismatch"
+        );
 
         PoolInfo storage pool = poolInfo[_poolId];
 
-        require(block.timestamp >= pool.info.lotteryEndTime, "Lock: Pool not ended yet");
+        require(
+            block.timestamp >= pool.info.lotteryEndTime,
+            "Lock: Pool not ended yet"
+        );
 
         uint256 totalPercentages;
         for (uint256 i = 0; i < _percentages.length; i++) {
             totalPercentages = totalPercentages.add(_percentages[i]);
         }
-        require(totalPercentages == 100, "deposit: sum of percentages should be 100");
+        require(
+            totalPercentages == 100,
+            "deposit: sum of percentages should be 100"
+        );
 
-        require(pool.vestingAmount > 0, "deposit: must lock more than 0 tokens");
+        require(
+            pool.vestingAmount > 0,
+            "deposit: must lock more than 0 tokens"
+        );
 
         pool.vest.depositTime = block.timestamp;
         pool.vest.vestingPercentages = _percentages;
@@ -227,7 +333,11 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         pool.vest.lock = _lock;
 
         IERC20 token = IERC20(pool.info.teamToken);
-        token.safeTransferFrom(address(msg.sender), address(this), pool.vestingAmount);
+        token.safeTransferFrom(
+            address(msg.sender),
+            address(this),
+            pool.vestingAmount
+        );
 
         emit Lock(_poolId, _token, _lock, _percentages, _vestingsPeriods);
     }
@@ -248,7 +358,11 @@ contract LotteryDao2 is ILotteryDao, Ownable {
         emit Withdraw(_poolId, transferAmount, address(msg.sender));
     }
 
-    function _calcVestableAmount(uint256 _poolId) public view returns (uint256) {
+    function _calcVestableAmount(uint256 _poolId)
+        public
+        view
+        returns (uint256)
+    {
         if (_poolId >= poolId) {
             return 0;
         }
@@ -273,13 +387,17 @@ contract LotteryDao2 is ILotteryDao, Ownable {
             }
         }
         uint256 vestableAmount;
-        uint256 participatedAmount = pool.userdata[address(msg.sender)].participatedAmount;
+        uint256 participatedAmount = pool
+            .userdata[address(msg.sender)]
+            .participatedAmount;
 
         uint256 vestablePrice = participatedAmount.mul(pool.info.tokenPrice);
         uint256 allocAmount = vestablePrice.div(pool.info.teamTokenPrice);
 
         for (uint256 i = 0; i < currentVestingIndex; i++) {
-            vestableAmount = vestableAmount + allocAmount.mul(vestingPercentages[i]).div(100);
+            vestableAmount =
+                vestableAmount +
+                allocAmount.mul(vestingPercentages[i]).div(100);
         }
         uint256 timePassed = block.timestamp.sub(currentVesting);
         if (timePassed > vestingPeriods[currentVestingIndex]) {
