@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.7.4;
+pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
@@ -81,7 +81,7 @@ contract Claiming is
         uint256 _pid,
         uint256 _amount,
         bytes32[] calldata _whitelistProof
-    ) public override nonReentrant {
+    ) external override nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
 
         require(_amount > 0, "Claim: Amount should be greater then 0");
@@ -109,10 +109,10 @@ contract Claiming is
 
         pool.claimToken.safeTransfer(msg.sender, _amount);
 
-        emit Claimed(msg.sender, _amount);
+        emit Claimed(_pid, msg.sender, _amount);
     }
 
-    function withdrawFunds(uint256 _pid) public nonReentrant {
+    function withdrawFunds(uint256 _pid) external nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         require(
             msg.sender == pool.beneficiary,
@@ -126,10 +126,10 @@ contract Claiming is
         pool.purchaseToken.transfer(msg.sender, pool.purchasedAmount);
         pool.purchasedAmount = 0;
 
-        emit FundWithdrawed(msg.sender, pool.purchasedAmount);
+        emit FundWithdrawed(_pid, msg.sender, pool.purchasedAmount);
     }
 
-    function deposit(uint256 _pid, uint256 _amount) public nonReentrant {
+    function deposit(uint256 _pid, uint256 _amount) external nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         require(_amount >= pool.allocSize, "deposit: amount is too small");
 
@@ -143,7 +143,7 @@ contract Claiming is
         address _token,
         address _beneficiary,
         uint256 _amount
-    ) public onlyOwner {
+    ) external onlyOwner {
         require(
             _amount > 0,
             "emergencyWithdraw: Amount should be greater then 0"

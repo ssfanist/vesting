@@ -49,6 +49,7 @@ module.exports = {
         ),
       network_id: 97,
       confirmations: 10,
+      networkCheckTimeoutnetworkCheckTimeout: 10000,
       timeoutBlocks: 200,
       skipDryRun: true,
     },
@@ -57,28 +58,66 @@ module.exports = {
       provider: () =>
         new HDWalletProvider(
           [process.env.PRIVATE_KEY],
-          `https://bsc-dataseed1.defibit.io`
+          `https://speedy-nodes-nyc.moralis.io/74f12ed937780cabc4405f3c/bsc/mainnet`
         ),
       network_id: 56,
       gasPrice: 10000000000,
 
       skipDryRun: true,
     },
+    moonriver: {
+      // networkCheckTimeout: 9999999,
+      provider: () =>
+        new HDWalletProvider(
+          [process.env.PRIVATE_KEY],
+          `https://astar.api.onfinality.io/rpc?apikey=9f6c8b41-f1e8-40e2-a86f-f1fd95019887`
+        ),
+      network_id: 1285,
+      // gasPrice: 10000000000,
+
+      // skipDryRun: true,
+    },
+    harmony_test: {
+      // networkCheckTimeout: 9999999,
+      provider: () =>
+        new HDWalletProvider(
+          [process.env.PRIVATE_KEY],
+          `https://api.s0.b.hmny.io`
+        ),
+      network_id: 1666700000,
+      // gasPrice: 10000000000,
+
+      // skipDryRun: true,
+    },
+    harmony: {
+      // networkCheckTimeout: 9999999,
+      provider: () =>
+        new HDWalletProvider(
+          [process.env.PRIVATE_KEY],
+          `https://api.s0.t.hmny.io`
+        ),
+      network_id: 1666600000,
+      // gasPrice: 10000000000,
+
+      // skipDryRun: true,
+    },
   },
 
   mocha: {
-    timeout: 8000000,
+    timeout: 800000000,
   },
 
   plugins: ['truffle-plugin-verify', 'solidity-coverage'],
 
   api_keys: {
+    moonscan: process.env.MOONRIVER,
     etherscan: process.env.ETHERSCAN_KEY,
+    bscscan: process.env.BSCSCAN_KEY,
   },
 
   compilers: {
     solc: {
-      version: '0.7.4',
+      version: '0.7.6',
       docker: false,
       settings: {
         optimizer: {

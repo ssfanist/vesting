@@ -4,20 +4,19 @@ pragma solidity ^0.7.4;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/cryptography/MerkleProof.sol";
-import "./interfaces/ILotteryDao2.sol";
+import "./interfaces/ILotteryDao.sol";
 
-contract LotteryDao2 is ILotteryDao2, Ownable {
+contract LotteryDao is ILotteryDao, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     using MerkleProof for bytes32[];
 
     bytes32 public _whitelistRoot;
 
-    uint256 internal MULTIPLIER = 1e18;
+    uint256 internal MULTIPLIER;
 
     uint256 public poolId;
     mapping(uint256 => PoolInfo) public poolInfo;
@@ -38,6 +37,11 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
             "not a winner"
         );
         _;
+    }
+
+    function initialize() public initializer {
+        __Ownable_init();
+        MULTIPLIER = 1e18;
     }
 
     function setWhitelistRoot(bytes32 merkleRoot) external onlyOwner {
@@ -68,16 +72,8 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
             "_openTime should be greater than openTime"
         );
         require(
-            _info.openTime < _info.lotteryOpenTime,
+            _info.openTime < _info.endTime,
             "_lotteryOpenTime should be greater than _openTime"
-        );
-        require(
-            _info.lotteryOpenTime < _info.lotteryEndTime,
-            "_lotteryEndTime should be greater than _lotteryOpenTime"
-        );
-        require(
-            _info.lotteryEndTime < _info.endTime,
-            "_endTime should be greater than _lotteryTime"
         );
 
         PoolInfo storage pool = poolInfo[poolId];
@@ -112,40 +108,22 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
     function setTimes(
         uint256 _poolId,
         uint256 _openTime,
-        uint256 _lotteryOpenTime,
-        uint256 _lotteryEndTime,
         uint256 _endTime
     ) external onlyOwner checkPoolId(_poolId) {
         require(
             block.timestamp < _openTime,
-            "_openTime should be greater than openTime"
+            "currentTime should be greater than openTime"
         );
         require(
-            _openTime < _lotteryOpenTime,
-            "_lotteryOpenTime should be greater than _openTime"
-        );
-        require(
-            _lotteryOpenTime < _lotteryEndTime,
-            "_lotteryEndTime should be greater than _lotteryOpenTime"
-        );
-        require(
-            _lotteryEndTime < _endTime,
-            "_endTime should be greater than _lotteryTime"
+            _openTime < _endTime,
+            "_lotteryOpenTime should be greater than endTime"
         );
 
         PoolInfo storage pool = poolInfo[_poolId];
         pool.info.openTime = _openTime;
-        pool.info.lotteryOpenTime = _lotteryOpenTime;
-        pool.info.lotteryEndTime = _lotteryEndTime;
         pool.info.endTime = _endTime;
 
-        emit SetTimes(
-            _poolId,
-            _openTime,
-            _lotteryOpenTime,
-            _lotteryEndTime,
-            _endTime
-        );
+        emit SetTimes(_poolId, _openTime, _endTime);
     }
 
     function setPrices(
@@ -176,10 +154,13 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
             "withdrawFunds: not finished yet"
         );
         require(
-            IERC20(pool.info.token).balanceOf(address(this)) > 0,
+            IERC20Upgradeable(pool.info.token).balanceOf(address(this)) > 0,
             "withdrawFunds: insufficient balance"
         );
-        IERC20(pool.info.token).transfer(pool.info.beneficiary, pool.poolRaise);
+        IERC20Upgradeable(pool.info.token).transfer(
+            pool.info.beneficiary,
+            pool.poolRaise
+        );
 
         emit WithdrawFunds(_poolId, msg.sender, pool.poolRaise);
     }
@@ -191,10 +172,25 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         PoolInfo storage pool = poolInfo[_poolId];
         require(
             block.timestamp <= pool.info.openTime,
-            "setBlockHash: can set BlockHash before lotteryTime"
+            "setMinAllocation: can set min allocation before lottery open Time"
         );
 
         pool.minAllocation = _amount;
+
+        emit SetMinAllocation(_poolId, _amount);
+    }
+
+    function setMaxAllocation(uint256 _poolId, uint256 _amount)
+        external
+        checkPoolId(_poolId)
+    {
+        PoolInfo storage pool = poolInfo[_poolId];
+        require(
+            block.timestamp <= pool.info.openTime,
+            "setMinAllocation: can set max allocation before lottery open Time"
+        );
+
+        pool.maxAllocation = _amount;
 
         emit SetMinAllocation(_poolId, _amount);
     }
@@ -205,7 +201,10 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         UserInfo storage userdata = pool.userdata[msg.sender];
         bool isRegistered = userdata.isRegistered;
 
-        require(block.timestamp <= pool.info.openTime, "registryTime ended");
+        require(
+            block.timestamp <= pool.info.openTime,
+            "lottery Already started"
+        );
         require(!isRegistered, "already registered");
         userdata.isRegistered = true;
 
@@ -220,10 +219,14 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         returns (address, uint256)
     {
         PoolInfo storage pool = poolInfo[_poolId];
-        require(pool.ticketPrice > 0, "Ticket Price not set yet");
-
-        uint256 balance = IERC20(pool.info.token).balanceOf(_user);
-        return (_user, balance / pool.ticketPrice);
+        if (pool.ticketPrice > 0) {
+            uint256 balance = IERC20Upgradeable(pool.info.token).balanceOf(
+                _user
+            );
+            return (_user, balance / pool.ticketPrice);
+        } else {
+            return (_user, 0);
+        }
     }
 
     function setTicketAllocation(uint256 _poolId, uint256 _amount)
@@ -267,24 +270,26 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         userdata.participatedAmount += _amount;
 
         require(
-            userdata.participatedAmount <= _tickets.mul(pool.ticketAllocation),
+            userdata.participatedAmount <= _tickets.mul(pool.ticketPrice),
             "participate: reached to limit"
         );
         require(
-            userdata.participatedAmount.mul(pool.info.tokenPrice) >=
-                pool.minAllocation
+            userdata.participatedAmount.mul(pool.info.tokenPrice).div(
+                MULTIPLIER
+            ) >= pool.minAllocation
         );
         require(
-            userdata.participatedAmount.mul(pool.info.tokenPrice) <=
-                pool.maxAllocation
+            userdata.participatedAmount.mul(pool.info.tokenPrice).div(
+                MULTIPLIER
+            ) <= pool.maxAllocation
         );
         require(
-            pool.participatedAmount.mul(pool.info.tokenPrice) <=
+            pool.participatedAmount.mul(pool.info.tokenPrice).div(MULTIPLIER) <=
                 pool.info.totalRaise,
             "participate: POOL FILLED"
         );
 
-        IERC20(pool.info.token).transferFrom(
+        IERC20Upgradeable(pool.info.token).transferFrom(
             msg.sender,
             address(this),
             _amount
@@ -298,18 +303,18 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         address _token,
         uint256 _lock,
         uint256[] memory _percentages,
-        uint256[] memory _vestingsPeriods
+        uint256[] memory _vestingsPeriods,
+        uint256 _allocAmount
     ) external onlyOwner {
         require(_token != address(0), "Lock: token address can't be 0");
         require(
             _vestingsPeriods.length == _percentages.length,
             "Lock: Input arrary lengths mismatch"
         );
-
         PoolInfo storage pool = poolInfo[_poolId];
 
         require(
-            block.timestamp >= pool.info.lotteryEndTime,
+            block.timestamp >= pool.info.endTime,
             "Lock: Pool not ended yet"
         );
 
@@ -330,9 +335,10 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         pool.vest.depositTime = block.timestamp;
         pool.vest.vestingPercentages = _percentages;
         pool.vest.vestingPeriods = _vestingsPeriods;
+        pool.vestingAmount = _allocAmount;
         pool.vest.lock = _lock;
 
-        IERC20 token = IERC20(pool.info.teamToken);
+        IERC20Upgradeable token = IERC20Upgradeable(pool.info.teamToken);
         token.safeTransferFrom(
             address(msg.sender),
             address(this),
@@ -342,16 +348,25 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         emit Lock(_poolId, _token, _lock, _percentages, _vestingsPeriods);
     }
 
-    function withdraw(uint256 _poolId) external {
+    function withdraw(
+        uint256 _poolId,
+        uint256 _tickets,
+        bytes32[] calldata _whitelistProof
+    ) external {
+        require(
+            verifyWhitelist(msg.sender, _poolId, _tickets, _whitelistProof),
+            "not a winner"
+        );
+
         uint256 vestableAmount = _calcVestableAmount(_poolId);
 
         PoolInfo storage pool = poolInfo[_poolId];
-        uint256 withdrawAmount = pool.userdata[msg.sender].withdrawAmount;
 
-        IERC20 token = IERC20(pool.info.teamToken);
-        uint256 transferAmount = vestableAmount.sub(withdrawAmount);
+        IERC20Upgradeable token = IERC20Upgradeable(pool.info.teamToken);
+        uint256 transferAmount = (vestableAmount * _tickets) /
+            pool.ticketAllocation;
 
-        pool.userdata[msg.sender].withdrawAmount = vestableAmount;
+        pool.userdata[msg.sender].withdrawAmount += transferAmount;
 
         token.safeTransfer(address(msg.sender), transferAmount);
 
@@ -376,40 +391,35 @@ contract LotteryDao2 is ILotteryDao2, Ownable {
         }
 
         uint256 currentVestingIndex;
+        uint256 vestableAmount;
         uint256[] memory vestingPeriods = pool.vest.vestingPeriods;
         uint256[] memory vestingPercentages = pool.vest.vestingPercentages;
         for (uint256 i = 0; i < vestingPeriods.length; i++) {
             currentVestingIndex = i;
             if (currentVesting.add(vestingPeriods[i]) < block.timestamp) {
                 currentVesting = currentVesting.add(vestingPeriods[i]);
+                vestableAmount +=
+                    (pool.vestingAmount * pool.vest.vestingPercentages[i]) /
+                    100;
             } else {
                 break;
             }
         }
-        uint256 vestableAmount;
-        uint256 participatedAmount = pool
-            .userdata[address(msg.sender)]
-            .participatedAmount;
 
-        uint256 vestablePrice = participatedAmount.mul(pool.info.tokenPrice);
-        uint256 allocAmount = vestablePrice.div(pool.info.teamTokenPrice);
+        uint256 timePassed;
+        if (currentVestingIndex < pool.vest.vestingPeriods.length) {
+            timePassed = block.timestamp.sub(currentVesting);
 
-        for (uint256 i = 0; i < currentVestingIndex; i++) {
-            vestableAmount =
-                vestableAmount +
-                allocAmount.mul(vestingPercentages[i]).div(100);
+            if (timePassed > vestingPeriods[currentVestingIndex]) {
+                timePassed = vestingPeriods[currentVestingIndex];
+            }
         }
-        uint256 timePassed = block.timestamp.sub(currentVesting);
-        if (timePassed > vestingPeriods[currentVestingIndex]) {
-            timePassed = vestingPeriods[currentVestingIndex];
-        }
-        vestableAmount =
-            vestableAmount +
-            timePassed
-                .mul(allocAmount)
-                .mul(vestingPercentages[currentVestingIndex])
-                .div(vestingPeriods[currentVestingIndex])
-                .div(100);
+
+        vestableAmount += timePassed
+            .mul(pool.vestingAmount)
+            .mul(vestingPercentages[currentVestingIndex])
+            .div(vestingPeriods[currentVestingIndex])
+            .div(100);
         return vestableAmount;
     }
 

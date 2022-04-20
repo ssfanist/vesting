@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.7.4;
+pragma solidity 0.7.6;
 
 interface IClaiming {
     event PoolAdded(
@@ -13,10 +13,18 @@ interface IClaiming {
         bytes32 _whitelistRoot,
         address _beneficiary
     );
-    event Claimed(address indexed user, uint256 amount);
-    event FundWithdrawed(address indexed beneficiary, uint256 amount);
+    event Claimed(uint256 indexed pid, address user, uint256 amount);
+    event FundWithdrawed(
+        uint256 indexed pid,
+        address beneficiary,
+        uint256 amount
+    );
     event Deposited(uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(address indexed token, address beneficiary, uint256 amount);
+    event EmergencyWithdraw(
+        address indexed token,
+        address beneficiary,
+        uint256 amount
+    );
 
     function initialize(address _owner) external;
 

@@ -3,14 +3,16 @@
 pragma solidity ^0.7.4;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface ILotteryDao {
+interface ILotteryDao2 {
     struct InitialInfo {
         uint256 totalRaise;
         uint256 winningTickets;
         address beneficiary;
         uint256 openTime;
+        uint256 lotteryOpenTime;
+        uint256 lotteryEndTime;
         uint256 endTime;
         address token;
         uint256 tokenPrice;
@@ -62,7 +64,13 @@ interface ILotteryDao {
     );
     event AddedPool(uint256 id, InitialInfo info);
     event UpdateBeneficiary(uint256 _poolId, address _beneficiary);
-    event SetTimes(uint256 _poolId, uint256 _openTime, uint256 _endTime);
+    event SetTimes(
+        uint256 _poolId,
+        uint256 _openTime,
+        uint256 _lotteryOpenTime,
+        uint256 _lotteryEndTime,
+        uint256 _endTime
+    );
     event SetPrice(
         uint256 _poolId,
         uint256 _tokenPrice,
