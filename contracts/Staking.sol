@@ -4,10 +4,11 @@ pragma solidity ^0.7.4;
 
 import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "./interfaces/IPriceOracleAggregator.sol";
 import "./interfaces/IStaking.sol";
 
 contract Staking is
@@ -17,13 +18,16 @@ contract Staking is
     PausableUpgradeable
 {
     using SafeMathUpgradeable for uint256;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 public pid;
+    /// @notice The price oracle for the assets
+    IPriceOracleAggregator public oracle;
+    address public burn;
+
     struct PoolInfo {
         string name;
-        IERC20Upgradeable stakingToken;
-        IERC20Upgradeable rewardsToken;
+        IERC20 stakingToken;
+        IERC20 rewardsToken;
         uint256 allocSize;
         uint256[2] stakingLimits;
         uint256 poolLimit;
@@ -34,16 +38,19 @@ contract Staking is
         uint256 rewardPerTokenStored;
         uint256 rewardTokensLocked;
         uint256 totalStaked;
+        uint16 burnPercentage;
         mapping(address => uint256) userRewardPerTokenPaid;
         mapping(address => uint256) rewards;
+        mapping(address => uint256) totalPrice;
         mapping(address => uint256) staked;
     }
 
-    mapping(uint256 => bool) immWithdraw;
-
+    mapping(uint256 => bool) private immWithdraw;
     mapping(uint256 => PoolInfo) public poolInfo;
 
-    function initialize(address _owner) external override initializer {
+    function initialize(address _owner, address _oracle) external initializer {
+        oracle = IPriceOracleAggregator(_oracle);
+
         __Ownable_init();
         transferOwnership(_owner);
         __Pausable_init();
@@ -81,8 +88,8 @@ contract Staking is
         PoolInfo storage pool = poolInfo[pid];
 
         pool.name = _name;
-        pool.stakingToken = IERC20Upgradeable(_stakingToken);
-        pool.rewardsToken = IERC20Upgradeable(_rewardsToken);
+        pool.stakingToken = IERC20(_stakingToken);
+        pool.rewardsToken = IERC20(_rewardsToken);
         pool.allocSize = _allocSize;
         pool.stakingLimits[0] = _minStakingLimit;
         pool.stakingLimits[1] = _maxStakingLimit;
@@ -106,6 +113,18 @@ contract Staking is
             _immWithdraw
         );
         pid += 1;
+    }
+
+    function setBurnAddress(address _burn) external onlyOwner {
+        burn = _burn;
+    }
+
+    function setBurnPercentage(uint256 _pid, uint16 _burnPercentage)
+        external
+        onlyOwner
+    {
+        PoolInfo storage pool = poolInfo[_pid];
+        pool.burnPercentage = _burnPercentage;
     }
 
     function pause() external override onlyOwner {
@@ -153,9 +172,12 @@ contract Staking is
             amount = pool.poolLimit.sub(pool.totalStaked);
         }
 
+        pool.totalPrice[msg.sender] +=
+            oracle.getPriceInUSD(pool.stakingToken) *
+            amount;
         pool.totalStaked = pool.totalStaked.add(amount);
         pool.staked[msg.sender] = pool.staked[msg.sender].add(amount);
-        pool.stakingToken.safeTransferFrom(msg.sender, address(this), amount);
+        pool.stakingToken.transferFrom(msg.sender, address(this), amount);
         emit Staked(msg.sender, amount);
     }
 
@@ -181,9 +203,17 @@ contract Staking is
             );
         }
 
+        uint256 burnPrice = (totalPrice(_pid, msg.sender) * _amount) /
+            pool.totalStaked;
+        uint256 burnAmount = burnPrice /
+            oracle.getPriceInUSD(pool.stakingToken);
+
+        require(_amount >= burnAmount, "STAKING: TOO SMALL WITHDRAW AMOUNT");
+
         pool.totalStaked = pool.totalStaked.sub(_amount);
         pool.staked[msg.sender] = pool.staked[msg.sender].sub(_amount);
-        pool.stakingToken.safeTransfer(msg.sender, _amount);
+        pool.stakingToken.transfer(msg.sender, _amount - burnAmount);
+        pool.stakingToken.transfer(burn, _amount - burnAmount);
         emit Withdrawn(msg.sender, _amount);
     }
 
@@ -273,9 +303,19 @@ contract Staking is
         return pool.totalStaked;
     }
 
+    function totalPrice(uint256 _pid, address _user)
+        public
+        view
+        returns (uint256)
+    {
+        PoolInfo storage pool = poolInfo[_pid];
+        return pool.totalPrice[_user];
+    }
+
     function userStaked(uint256 _pid, address _user)
         public
         view
+        override
         returns (uint256)
     {
         PoolInfo storage pool = poolInfo[_pid];

@@ -41,7 +41,7 @@ module.exports = {
       gas: 6721975,
       skipDryRun: true,
     },
-    testnet: {
+    bsctest: {
       provider: () =>
         new HDWalletProvider(
           [process.env.PRIVATE_KEY],
@@ -58,7 +58,7 @@ module.exports = {
       provider: () =>
         new HDWalletProvider(
           [process.env.PRIVATE_KEY],
-          `https://speedy-nodes-nyc.moralis.io/74f12ed937780cabc4405f3c/bsc/mainnet`
+          `https://bsc-dataseed1.defibit.io/`
         ),
       network_id: 56,
       gasPrice: 10000000000,

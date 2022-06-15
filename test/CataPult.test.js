@@ -66,10 +66,10 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
     })
   })
 
-  describe('addTeam', () => {
+  describe('addPool', () => {
     it('should revert if token address is 0', async () => {
       await expectRevert(
-        cataPult.addTeam(
+        cataPult.addPool(
           '0x0000000000000000000000000000000000000000',
           '10000000000000000000000',
           user1,
@@ -80,12 +80,12 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
           '20000000000',
           { from: owner }
         ),
-        'addTeam: token address cant be 0'
+        'addPool: token address cant be 0'
       )
     })
     it('should revert if total raise is 0', async () => {
       await expectRevert(
-        cataPult.addTeam(
+        cataPult.addPool(
           vestingToken.address,
           '0',
           user1,
@@ -96,12 +96,12 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
           wei('20000'),
           { from: owner }
         ),
-        'addTeam: _totalRaise must be greater than 0'
+        'addPool: _poolLimit must be greater than 0'
       )
     })
     it('should revert if beneficiary is 0', async () => {
       await expectRevert(
-        cataPult.addTeam(
+        cataPult.addPool(
           vestingToken.address,
           '10000000000000000000000',
           '0x0000000000000000000000000000000000000000',
@@ -112,12 +112,12 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
           wei('20000'),
           { from: owner }
         ),
-        'addTeam: _beneficiary address cant be 0'
+        'addPool: _beneficiary address cant be 0'
       )
     })
     it('should revert if start is before current timestamp', async () => {
       await expectRevert(
-        cataPult.addTeam(
+        cataPult.addPool(
           vestingToken.address,
           '10000000000000000000000',
           user1,
@@ -128,12 +128,12 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
           wei('20000'),
           { from: owner }
         ),
-        'addTeam: startTime should be greater than current Time'
+        'addPool: startTime should be greater than current Time'
       )
     })
     it('should revert if endTime is before startTime', async () => {
       await expectRevert(
-        cataPult.addTeam(
+        cataPult.addPool(
           vestingToken.address,
           '10000000000000000000000',
           user1,
@@ -144,12 +144,12 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
           wei('20000'),
           { from: owner }
         ),
-        'addTeam: endTime should be greater than startTime'
+        'addPool: endTime should be greater than startTime'
       )
     })
     it('should revert if price is 0', async () => {
       await expectRevert(
-        cataPult.addTeam(
+        cataPult.addPool(
           vestingToken.address,
           '10000000000000000000000',
           user1,
@@ -160,44 +160,29 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
           wei('20000'),
           { from: owner }
         ),
-        'addTeam: _price must be greater than 0'
-      )
-    })
-    it('should revert if minAlloc is 0', async () => {
-      await expectRevert(
-        cataPult.addTeam(
-          vestingToken.address,
-          '10000000000000000000000',
-          user1,
-          START_TIME,
-          END_TIME,
-          '10000000000',
-          wei('0'),
-          wei('20000'),
-          { from: owner }
-        ),
-        'addTeam: _minAlloc must be greater than 0'
-      )
-    })
-    it('should revert if maxAlloc is less than minAlloc', async () => {
-      await expectRevert(
-        cataPult.addTeam(
-          vestingToken.address,
-          '10000000000000000000000',
-          user1,
-          START_TIME,
-          END_TIME,
-          '10000000000',
-          wei('10000'),
-          wei('10000'),
-          { from: owner }
-        ),
-        'addTeam: _minAlloc must be greater than _maxAlloc'
+        'addPool: _price must be greater than 0'
       )
     })
 
-    it('should add a team', async () => {
-      await cataPult.addTeam(
+    it('should revert if maxAlloc is less than minAlloc', async () => {
+      await expectRevert(
+        cataPult.addPool(
+          vestingToken.address,
+          '10000000000000000000000',
+          user1,
+          START_TIME,
+          END_TIME,
+          '10000000000',
+          wei('10000'),
+          wei('1000'),
+          { from: owner }
+        ),
+        'addPool: _minAlloc must be greater than _maxAlloc'
+      )
+    })
+
+    it('should add a pool', async () => {
+      await cataPult.addPool(
         vestingToken.address,
         '10000000000000000000000',
         user1,
@@ -208,12 +193,12 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
         wei('20000'),
         { from: owner }
       )
-      expect((await cataPult.teamId()).toString()).to.equal('1')
+      expect((await cataPult.pid()).toString()).to.equal('1')
     })
   })
   describe('deposit', () => {
     beforeEach(async () => {
-      await cataPult.addTeam(
+      await cataPult.addPool(
         vestingToken.address,
         wei('10000000000'),
         user1,
@@ -225,46 +210,33 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
         { from: owner }
       )
     })
-    it('should revert if _teamID is too large', async () => {
+    it('should revert if _PoolID is too large', async () => {
       await expectRevert(
-        cataPult.deposit('1', wei('10000000000'), { from: user1 }),
-        'deposit: _teamId is too large'
-      )
-    })
-    it('should revert if amount < minAlloc', async () => {
-      await expectRevert(
-        cataPult.deposit('0', wei('3000000000'), { from: user2 }),
-        'deposit: amount must be greater than minAlloc'
-      )
-    })
-    it('should revert if amount >  maxAlloc', async () => {
-      await expectRevert(
-        cataPult.deposit('0', wei('10000000001'), { from: user1 }),
-        'deposit: amount must be lower than maxAlloc'
-      )
-    })
-    it('should tranfser tokens', async () => {
-      await advanceTimeAndBlock(SECONDS_IN_DAY)
-      await cataPult.deposit('0', wei('10000000000'), { from: user1 })
-      expect(await vestingToken.balanceOf(user1)).to.be.a.bignumber.equal(
-        wei('0')
+        cataPult.stake('1', wei('10000000000'), { from: user1 }),
+        'deposit: _pid is too large'
       )
     })
 
-    it('should revert if reached to limit', async () => {
+    it('should stake maxAlloc if amount >  maxAlloc', async () => {
       await advanceTimeAndBlock(SECONDS_IN_DAY)
-      await cataPult.deposit('0', wei('5000000000'), { from: user3 })
-      await cataPult.deposit('0', wei('5000000000'), { from: user4 })
-      await expectRevert(
-        cataPult.deposit('0', wei('5000000000'), { from: user1 }),
-        'deposit: already reached to limit'
+      await cataPult.stake('0', wei('10000000001'), { from: user1 })
+
+      expect(
+        await vestingToken.balanceOf(cataPult.address)
+      ).to.be.a.bignumber.equal(wei('10000000000'))
+    })
+    it('should tranfser tokens', async () => {
+      await advanceTimeAndBlock(SECONDS_IN_DAY)
+      await cataPult.stake('0', wei('10000000000'), { from: user1 })
+      expect(await vestingToken.balanceOf(user1)).to.be.a.bignumber.equal(
+        wei('0')
       )
     })
   })
 
   describe('updateBeneficiary', () => {
     beforeEach(async () => {
-      await cataPult.addTeam(
+      await cataPult.addPool(
         vestingToken.address,
         '10000000000000000000000',
         user1,
@@ -276,10 +248,10 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
         { from: owner }
       )
     })
-    it('should revert if _teamID is too large', async () => {
+    it('should revert if _PoolID is too large', async () => {
       await expectRevert(
         cataPult.updateBeneficiary('1', user2, { from: owner }),
-        'updateBeneficiary: _teamId is too large'
+        'updateBeneficiary: _pid is too large'
       )
     })
     it('should revert if not a owner', async () => {
@@ -303,7 +275,7 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
 
   describe('updateAllocAmounts', () => {
     beforeEach(async () => {
-      await cataPult.addTeam(
+      await cataPult.addPool(
         vestingToken.address,
         '10000000000000000000000',
         user1,
@@ -315,7 +287,7 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
         { from: owner }
       )
     })
-    it('should revert if _teamID is too large', async () => {
+    it('should revert if _PoolID is too large', async () => {
       await expectRevert(
         cataPult.updateAllocAmounts(
           '1',
@@ -323,7 +295,7 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
           wei('17000000000'),
           { from: owner }
         ),
-        'updateAllocAmounts: _teamId is too large'
+        'updateAllocAmounts: _pid is too large'
       )
     })
     it('should revert if not a owner', async () => {
@@ -360,7 +332,7 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
 
   describe('updateTimes', () => {
     beforeEach(async () => {
-      await cataPult.addTeam(
+      await cataPult.addPool(
         vestingToken.address,
         '10000000000000000000000',
         user1,
@@ -372,10 +344,10 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
         { from: owner }
       )
     })
-    it('should revert if _teamID is too large', async () => {
+    it('should revert if _PoolID is too large', async () => {
       await expectRevert(
         cataPult.updateTimes('1', START_TIME, END_TIME, { from: owner }),
-        'updateTimes: _teamId is too large'
+        'updateTimes: _pid is too large'
       )
     })
     it('should revert if not a owner', async () => {
@@ -400,7 +372,7 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
 
   describe('withdraw', () => {
     beforeEach(async () => {
-      await cataPult.addTeam(
+      await cataPult.addPool(
         vestingToken.address,
         wei('10000000000'),
         user1,
@@ -412,12 +384,12 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
         { from: owner }
       )
       await advanceTimeAndBlock(SECONDS_IN_DAY)
-      await cataPult.deposit('0', wei('5000000000'), { from: user3 })
+      await cataPult.stake('0', wei('5000000000'), { from: user3 })
     })
-    it('should revert if _teamID is too large', async () => {
+    it('should revert if _PoolID is too large', async () => {
       await expectRevert(
         cataPult.withdraw('1', { from: user1 }),
-        'withdraw: _teamId is too large'
+        'withdraw: _pid is too large'
       )
     })
     it('should revert if not a beneficiary', async () => {
@@ -433,7 +405,7 @@ contract('CataPult', async ([owner, user1, user2, user3, user4]) => {
       )
     })
     it('should withdraw correct amount', async () => {
-      await cataPult.deposit('0', wei('6000000000'), { from: user3 })
+      await cataPult.stake('0', wei('60000000000'), { from: user3 })
       await cataPult.withdraw('0', { from: user1 })
       console.log(
         'wait vestingToken.balanceOf(user1)',

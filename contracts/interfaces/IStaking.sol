@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.7.4;
 
 interface IStaking {
-    event RewardsSet(uint256 rewardPerBlock, uint256 firstBlockWithReward, uint256 lastBlockWithReward);
+    event RewardsSet(
+        uint256 rewardPerBlock,
+        uint256 firstBlockWithReward,
+        uint256 lastBlockWithReward
+    );
     event PoolAdded(
         uint256 indexed pid,
         string _name,
@@ -20,8 +23,6 @@ interface IStaking {
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
 
-    function initialize(address _owner) external;
-
     function pause() external;
 
     function unpause() external;
@@ -30,9 +31,20 @@ interface IStaking {
 
     function withdraw(uint256 _pid, uint256 _amount) external;
 
-    function blocksWithRewardsPassed(uint256 _pid) external view returns (uint256);
+    function blocksWithRewardsPassed(uint256 _pid)
+        external
+        view
+        returns (uint256);
 
     function rewardPerToken(uint256 _pid) external view returns (uint256);
 
-    function earned(uint256 _pid, address _account) external view returns (uint256);
+    function earned(uint256 _pid, address _account)
+        external
+        view
+        returns (uint256);
+
+    function userStaked(uint256 _pid, address _user)
+        external
+        view
+        returns (uint256);
 }
